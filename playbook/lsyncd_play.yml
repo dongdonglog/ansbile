@@ -1,0 +1,41 @@
+- name: lsyncd
+  hosts: lsyncd_server
+  tasks:
+    - name: 01-yum
+      yum:
+        name: lsyncd
+        state: latest
+    - name: 02-group
+      group: 
+        name: www
+        gid: 1000
+
+    - name: 03-user
+      user:
+        name: www
+        uid: 1000
+        group: www
+        create_home: no
+        shell: /sbin/nologin
+
+    - name: 04-copy
+      copy:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        mode: "{{item.mode}}"
+      loop:
+        - { src: '/opt/lsyncd.conf' , dest: '/etc/lsyncd.conf' , mode: '644' }
+        - { src: '/opt/rsync.pass' , dest: '/etc/rsync.pass' , mode: '600'}
+      notify:
+        - restart lsyncd
+     
+    - name: 05-systemd
+      systemd:
+        name: lsyncd
+        state: started
+        
+  handlers:
+    - name: restart lsyncd
+      systemd:
+        name: lsyncd
+        state: restart                 

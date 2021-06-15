@@ -1,0 +1,70 @@
+- name: rsync
+#服务端
+  hosts: rsync_server
+  vars: 
+    file_path: /opt/rsyncd.conf
+    dest_path: /etc/
+    passwd_path: /opt/rsync.passwd
+
+  tasks:
+    - name: 01-yum-rsync
+      yum:
+        name: rsync
+        state: installed
+
+    - name: 02-copy
+      copy:
+        src: "{{ file_path }}"
+        dest: "{{ dest_path }}"
+      notify:
+        - restart rsyncd
+
+    - name: 03-group
+      group:
+        name: www
+        gid: 1000
+   
+    - name: 04-user
+      user:
+        name: www
+        uid: 1000
+        group: www
+        create_home: no
+        shell: /sbin/nologin
+
+    - name: 05-file
+      file:
+        path: /data #backup的data
+        owner: www
+        group: www
+        state: directory
+
+    - name: 06-copy
+      copy:
+        src: "{{ passwd_path }}"
+        dest: "{{ dest_path }}"
+        mode: '600'
+      notify:
+        - restart rsyncd
+     
+    - name: 07-systemd
+      systemd:
+        name: rsyncd
+        state: started
+#客户端
+- hosts: rsync_client
+  tasks:
+    - name: 01-yum
+      yum:
+        name: rsync
+        state: installed
+    - name: 02-systemd
+      systemd:
+        name: rsyncd
+        state: started
+      
+  handlers:
+    - name: restart rsyncd
+      systemd:
+        name: rsyncd
+        state: restart

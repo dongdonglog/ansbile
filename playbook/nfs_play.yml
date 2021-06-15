@@ -1,0 +1,75 @@
+- name: nfs
+  hosts: nfs_server
+  vars:
+    file_path: /opt/exports
+    data_path: /etc/exports    
+  tasks:
+    - name: 01-yum
+      yum:
+        name: nfs-utils
+        state: installed
+    
+    - name: 02-group
+      group:
+        name: www
+        gid: 1000
+    
+    - name: 03-user
+      user:
+        name: www
+        uid: 1000
+        group: www
+        create_home: no
+        shell: /sbin/nologin
+
+    - name: 04-file
+      file:
+        path: /data
+        owner: www
+        group: www
+        state: directory
+
+    - name: 05-copy
+      copy: 
+        src: "{{file_path}}"
+        dest: "{{data_path}}"
+
+    - name: 06-mount
+      mount: 
+        src: 172.16.1.31:/data
+        path: /data
+        fstype: nfs
+        state: present
+   
+    - name: 07-systemd
+      systemd:
+        name: nfs
+        state: started
+
+#客户端
+- hosts: nfs_client   
+  tasks:
+    - name: 01-yum-client
+      yum:
+        name: nfs-utils
+        state: installed
+    
+    - name: 02-group-client
+      group:
+        name: www
+        gid: 1000
+
+    - name: 03-user
+      user:
+        name: www
+        uid: 1000
+        group: www
+        create_home: no
+        shell: /sbin/nologin
+
+    - name: 04-file
+      file:
+        path: /data
+        owner: www
+        group: www
+        state: directory                      
